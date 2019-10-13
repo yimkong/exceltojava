@@ -1,0 +1,13 @@
+<excel>
+    <!--类名的位置行和列-->
+    <nameRow>1</nameRow>
+    <nameColumn>1</nameColumn>
+    <!--注释的行-->
+    <explainRow>3</explainRow>
+    <!--区分客户端和服务器的行-->
+    <mark>4</mark>
+    <!--属性名行-->
+    <name>5</name>
+    <!--属性类型-->
+    <type>6</type>
+</excel>
