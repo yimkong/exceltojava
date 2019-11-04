@@ -20,13 +20,13 @@ public class Start {
         ExcelReader excelReader = new ExcelReader();
         Properties properties = new Properties();
         try {
-            properties.load(new InputStreamReader(new FileInputStream("G:\\legends\\legendconfigtool\\src\\main\\resources\\setting.properties")));
+            properties.load(new InputStreamReader(new FileInputStream("setting.properties")));
         } catch (IOException e) {
             e.printStackTrace();
         }
         XStream xStream = new XStream(new DomDriver());
         xStream.processAnnotations(ExcelConfig.class);
-        ExcelConfig excelConfig = (ExcelConfig)xStream.fromXML(new FileInputStream("G:\\legends\\legendconfigtool\\src\\main\\resources\\excel.xml"));
+        ExcelConfig excelConfig = (ExcelConfig)xStream.fromXML(new FileInputStream("excel.xml"));
         String excel_path = properties.getProperty("excel_path");
         String out_path = properties.getProperty("out_path");
 
