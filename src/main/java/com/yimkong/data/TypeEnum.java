@@ -1,9 +1,5 @@
 package com.yimkong.data;
 
-/**
- * @author lixun
- * created at 2017/9/30 下午2:52
- */
 public enum TypeEnum {
     INT("int", "Integer"),
     LONG("long", "Long"),
