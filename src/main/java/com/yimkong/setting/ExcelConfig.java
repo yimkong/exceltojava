@@ -14,16 +14,47 @@ public class ExcelConfig {
     private int nameRow;
     @XStreamAlias("nameColumn")
     private int nameColumn;
-    //注释的行
+    //属性描述行(注释)
     @XStreamAlias("explainRow")
     private int explainRow;
     //区分客户端和服务器的行
     @XStreamAlias("mark")
     private int mark;
     //属性名行
-    @XStreamAlias("name")
-    private int name;
+    @XStreamAlias("propertiesName")
+    private int propertiesName;
     //属性类型
     @XStreamAlias("type")
     private int type;
+    //代表后端读的标志
+    @XStreamAlias("markFlag")
+    private int markFlag;
+
+    public int getMarkFlag() {
+        return markFlag;
+    }
+
+    public int getPropertiesName() {
+        return propertiesName;
+    }
+
+    public int getNameRow() {
+        return nameRow;
+    }
+
+    public int getNameColumn() {
+        return nameColumn;
+    }
+
+    public int getExplainRow() {
+        return explainRow;
+    }
+
+    public int getMark() {
+        return mark;
+    }
+
+    public int getType() {
+        return type;
+    }
 }

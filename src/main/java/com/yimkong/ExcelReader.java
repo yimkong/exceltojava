@@ -1,15 +1,15 @@
 package com.yimkong;
 
-import com.yimkong.data.Table;
+import com.yimkong.data.ColumnMeta;
+import com.yimkong.data.TemplateMeta;
+import com.yimkong.setting.ExcelConfig;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * author yg
@@ -18,89 +18,125 @@ import java.util.List;
  */
 public class ExcelReader {
 
-    public List<Table> read(String excel_path) {
+    public Collection<TemplateMeta> read(String excel_path) {
         File file = new File(excel_path);
         File[] files = file.listFiles();
-        List<Table> tables = new LinkedList<>();
+        if (files == null) {
+            return new ArrayList<>();
+        }
+        List<TemplateMeta> list = new ArrayList<>();
         for (File input : files) {
             String name = input.getName();
+            if (name.startsWith("~$"))
+                continue;
             if (input.isFile() && input.canRead() && (name.endsWith(".xls") || (name.endsWith(".xlsx")))) {
                 try {
-                    List<Table> results = convert(input);
-                    tables.addAll(results);
+                    Map<String, TemplateMeta> convert = convert(input);
+                    list.addAll(convert.values());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-        return tables;
+        return list;
     }
 
-    private List<Table> convert(File file) throws IOException, InvalidFormatException {
+    private Map<String, TemplateMeta> convert(File file) throws IOException, InvalidFormatException {
         FileInputStream fileInputStream = new FileInputStream(file);
         Workbook book = WorkbookFactory.create(fileInputStream);
-        String fileName = file.getName();
-        List<Table> tableList = new ArrayList<Table>();
         try {
+            Map<String, TemplateMeta> map = new HashMap<>();
             int sheetNum = book.getNumberOfSheets();
             for (int i = 0; i < sheetNum; i++) {
-                Table table = getServerTableBySheet(book.getSheetAt(i), fileName);
-                if (table != null) {
-                    tableList.add(table);
+                String sheetName = book.getSheetName(i).trim();
+                if (sheetName.indexOf("#") != 0) {
+                    continue;
                 }
+                Sheet sheet = book.getSheetAt(i);
+                TemplateMeta meta = parseToTemplateMeta(sheet);
+                meta.fileName = file.getName();
+                if (meta.columns.isEmpty()) {
+                    continue;
+                }
+                map.put(meta.name, meta);
             }
+            return map;
         } finally {
             fileInputStream.close();
         }
-
-        return tableList;
     }
 
-    private Table getServerTableBySheet(Sheet sheet, String fileName) {
-//        Table table = new Table();
-//        Row row = sheet.getRow(CLASS_NAME_ROW);
-//        if (row == null) {
-//            return null;
-//        }
-//
-//        if (row.getCell(0) == null || !SERVER_NAME.equals(row.getCell(0).getStringCellValue())) {
-//            return null;
-//        }
-//        if (row.getCell(CLASS_NAME_CELL) == null
-//                || row.getCell(CLASS_NAME_CELL).getCellType() != Cell.CELL_TYPE_STRING) {
-//            return null;
-//        }
-//        String clazzName = row.getCell(CLASS_NAME_CELL).getStringCellValue();
-//        table.setClazzName(clazzName);
-//        table.setFileName(fileName);
-//        Row name = sheet.getRow(NAME_ROW);
-//        int cellStart = name.getFirstCellNum();
-//        int cellEnd = name.getLastCellNum();
-//        List<Head> heads = ExcelUtil.parseHead(sheet.getRow(RULE_ROW), sheet.getRow(FLAG_ROW), name, sheet.getRow(TYPE_ROW),
-//                sheet.getRow(COMMENT_ROW));
-//        table.setHeads(heads);
-//        for (int i = TYPE_ROW + 1; i <= sheet.getLastRowNum(); i++) {
-//            // 结束标志
-//            Row finishRow = sheet.getRow(i);
-//            if (finishRow == null) {
-//                break;
-//            }
-//            Cell finish = finishRow.getCell(CLASS_NAME_ROW);
-//            if (finish == null) {
-//                break;
-//            } else if (finish.getCellType() == Cell.CELL_TYPE_STRING) {
-//                if (finish.getStringCellValue().equalsIgnoreCase(FINISH_NAME)) {
-//                    break;
-//                }
-//            }
-//            List<Object> data = parseServerData(heads, cellStart, cellEnd, sheet.getRow(i));
-//            if (data == null)
-//                continue;
-//            table.addData(data);
-//        }
-//        ExcelUtil.reviseHead(heads);
-//        table.trimServer();
-//        return table;
-        return null;
+    private TemplateMeta parseToTemplateMeta(Sheet sheet) {
+        ExcelConfig excelConfig = Start.excelConfig;
+        Row row = sheet.getRow(excelConfig.getNameRow() - 1);
+        //校验数据
+        Cell cell = row.getCell(excelConfig.getNameColumn() - 1);
+        if (cell == null) {
+            throw new RuntimeException("配置表名字不能为空");
+        }
+        String name = cell.getStringCellValue();
+        if (name == null) {
+            throw new RuntimeException("配置表名字不能为空");
+        }
+        TemplateMeta templateMeta = new TemplateMeta(name);
+
+        Row nameRow = sheet.getRow(excelConfig.getPropertiesName() - 1);
+        if (nameRow == null) {
+            throw new RuntimeException("配置表表头格式不完整，缺少列名定义行");
+        }
+        Row typeRow = sheet.getRow(excelConfig.getType() - 1);
+        if (typeRow == null) {
+            throw new RuntimeException("配置表表头格式不完整，缺少列类型定义行");
+        }
+        Row flagRow = sheet.getRow(excelConfig.getMark() - 1);
+        if (flagRow == null) {
+            throw new RuntimeException("配置表表头格式不完整，缺少标记定义行");
+        }
+        Row descRow = sheet.getRow(excelConfig.getExplainRow() - 1);
+        if (descRow == null) {
+            throw new RuntimeException("配置表表头格式不完整，缺少描述定义行");
+        }
+        //得到属性的元信息
+        for (int i = nameRow.getFirstCellNum(); i < nameRow.getLastCellNum(); i++) {
+            Cell flagCell = flagRow.getCell(i);
+            if (flagCell == null) {
+                throw new RuntimeException("列标记不能为空，第" + (i + 1) + "列");
+            }
+            try {
+                int flag = (Double.valueOf(flagCell.toString())).intValue();
+                if (flag != excelConfig.getMarkFlag()) {
+                    continue;
+                }
+            } catch (Exception ex) {
+                System.err.println("flagCell.toString() " + flagCell.toString());
+                ex.printStackTrace();
+                throw new RuntimeException("列标记数据格式错误，第" + (i + 1) + "列");
+            }
+
+            ColumnMeta meta = new ColumnMeta(i);
+            Cell nameCell = nameRow.getCell(i);
+            if (nameCell == null) {
+                throw new RuntimeException("列名不能为空，第" + (i + 1) + "列");
+            }
+            String fieldName = nameCell.getStringCellValue();
+            if (fieldName == null) {
+                throw new RuntimeException("列名不能为空，第" + (i + 1) + "列");
+            }
+            meta.parseName(fieldName);
+            Cell typeCell = typeRow.getCell(i);
+            if (typeCell == null) {
+                throw new RuntimeException("列类型不能为空，第" + (i + 1) + "列");
+            }
+            String type = typeCell.getStringCellValue();
+            meta.parseType(type);
+            Cell descCell = descRow.getCell(i);
+            if (descCell == null) {
+                throw new RuntimeException("列名不能为空，第" + (i + 1) + "列");
+            }
+            meta.parseDesc(descCell.getStringCellValue());
+            templateMeta.addColumnMeta(meta);
+        }
+        return templateMeta;
     }
+
 }
