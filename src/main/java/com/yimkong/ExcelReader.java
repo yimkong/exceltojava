@@ -104,7 +104,7 @@ public class ExcelReader {
             }
             try {
                 int flag = (Double.valueOf(flagCell.toString())).intValue();
-                if (flag != excelConfig.getMarkFlag()) {
+                if (flag == excelConfig.getMarkFlag()) {
                     continue;
                 }
             } catch (Exception ex) {

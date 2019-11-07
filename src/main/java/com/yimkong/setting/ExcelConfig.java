@@ -26,7 +26,7 @@ public class ExcelConfig {
     //属性类型
     @XStreamAlias("type")
     private int type;
-    //代表后端读的标志
+    //代表前端读的标志
     @XStreamAlias("markFlag")
     private int markFlag;
 

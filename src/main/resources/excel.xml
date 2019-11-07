@@ -11,5 +11,5 @@
     <!--属性类型-->
     <type>5</type>
     <!--代表后端读的标志-->
-    <markFlag>3</markFlag>
+    <markFlag>1</markFlag>
 </excel>
